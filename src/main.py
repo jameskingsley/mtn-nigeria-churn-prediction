@@ -16,7 +16,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS so  Streamlit app can query the Render endpoint securely
+# Enable CORS so Streamlit app can query the Render endpoint securely
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  
@@ -32,7 +32,7 @@ def download_and_cache_clearml_model():
     global _PRODUCTION_MODEL
     if _PRODUCTION_MODEL is None:
         try:
-            print("Production Boot: Fetching model weights from ClearML...")
+            print(" Production Boot: Fetching model weights from ClearML...")
             # Query the precise model 
             clearml_model = Model.query_models(
                 project_name="MTN Nigeria Churn Prediction",
@@ -40,8 +40,15 @@ def download_and_cache_clearml_model():
                 only_published=False
             )[0]
             
-            # Downloads the .pkl file to Render's local container directory
-            local_path = clearml_model.get_local_copy()
+            # Force ClearML to extract model files into Render's writable temp directory
+            local_path = clearml_model.get_local_copy(extract_archive=True, target_folder="/tmp")
+            
+            # Fallback if target_folder execution matches specific non-iterable structures
+            if not local_path:
+                local_path = clearml_model.get_local_copy()
+                
+            print(f"Weights successfully downloaded to: {local_path}")
+            
             _PRODUCTION_MODEL = joblib.load(local_path)
             print("Successfully anchored model into memory cache!")
         except Exception as e:
@@ -70,6 +77,7 @@ def health_check():
 @app.post("/predict")
 def predict_churn(payload: CustomerFeatures):
     try:
+        # Pulls from ClearML on the 1st request, hits RAM cache on all following requests
         model = download_and_cache_clearml_model()
         input_df = pd.DataFrame([payload.model_dump()])
         
