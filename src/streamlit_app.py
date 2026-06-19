@@ -4,7 +4,7 @@ import requests
 # Page setup matching corporate theme
 st.set_page_config(page_title="MTN Nigeria Churn Gateway", page_icon="", layout="centered")
 
-st.title("MTN Nigeria Churn Scoring Portal")
+st.title("📱 MTN Nigeria Churn Scoring Portal")
 st.markdown("Enter customer behavior patterns to query the production machine learning model running on **FastAPI & ClearML**.")
 
 # Setup Input Form Fields
@@ -35,7 +35,8 @@ with st.form("churn_input_form"):
         total_revenue = unit_price * number_of_times_purchased
         st.info(f"Calculated Total Revenue: ₦{total_revenue:,}")
 
-    submit_btn = st.form_submit_with_value("Run Churn Risk Analysis")
+    # FIX: Correct native Streamlit method to finalize the form submission
+    submit_btn = st.form_submit_button("Run Churn Risk Analysis")
 
 # Package Payload & Fire API Post Request
 if submit_btn:
@@ -55,8 +56,8 @@ if submit_btn:
     }
     
     try:
-        # Route directly to the local FastAPI server
-        api_url = "http://127.0.0.1:8000/predict"
+        # Route directly to live Render endpoint
+        api_url = "https://mtn-nigeria-churn-prediction.onrender.com/predict"
         with st.spinner("Querying ClearML orchestration layers..."):
             response = requests.post(api_url, json=payload)
             
@@ -77,4 +78,4 @@ if submit_btn:
             st.write(response.text)
             
     except requests.exceptions.ConnectionError:
-        st.error("Connection Refused! Make sure your FastAPI app is running on port 8000 (`uvicorn src.main:app --reload`).")
+        st.error("Connection Refused! Make sure your API gateway is accessible.")

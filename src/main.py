@@ -49,11 +49,6 @@ def download_and_cache_clearml_model():
             raise e
     return _PRODUCTION_MODEL
 
-# Trigger the download immediately when the server boots up on Render
-@app.on_event("startup")
-def startup_event():
-    download_and_cache_clearml_model()
-
 class CustomerFeatures(BaseModel):
     age: int
     state: str
