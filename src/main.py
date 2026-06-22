@@ -32,23 +32,32 @@ def download_and_cache_clearml_model():
     global _PRODUCTION_MODEL
     if _PRODUCTION_MODEL is None:
         try:
-            print(" Production Boot: Fetching model weights from ClearML...")
-            # Query the precise model 
+            print("Production Boot: Fetching model weights from ClearML...")
+            # Query the precise model configuration from your workspace
             clearml_model = Model.query_models(
                 project_name="MTN Nigeria Churn Prediction",
                 model_name="MTN_Nigeria_Best_Churn_Model",
                 only_published=False
             )[0]
             
-            # Force ClearML to extract model files into Render's writable temp directory
-            local_path = clearml_model.get_local_copy(extract_archive=True, target_folder="/tmp")
+            # Use native ClearML artifact caching layer safely
+            local_path = clearml_model.get_local_copy()
             
-            # Fallback if target_folder execution matches specific non-iterable structures
             if not local_path:
-                local_path = clearml_model.get_local_copy()
+                raise FileNotFoundError("ClearML registry returned an empty file path.")
                 
-            print(f"Weights successfully downloaded to: {local_path}")
+            # If the downloaded artifact is a directory, look for the .pkl file inside it
+            if os.path.isdir(local_path):
+                print(f"Extracted folder found. Scanning directory contents: {local_path}")
+                files = [os.path.join(local_path, f) for f in os.listdir(local_path) if f.endswith('.pkl')]
+                if files:
+                    local_path = files[0]
+                else:
+                    raise FileNotFoundError(f"No .pkl files discovered inside directory: {local_path}")
             
+            print(f"Verified artifact weight target resolved to: {local_path}")
+            
+            # Unpickle scikit-learn metrics pipeline into RAM memory
             _PRODUCTION_MODEL = joblib.load(local_path)
             print("Successfully anchored model into memory cache!")
         except Exception as e:
