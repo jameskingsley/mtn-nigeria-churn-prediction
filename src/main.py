@@ -33,7 +33,7 @@ def download_and_cache_clearml_model():
     if _PRODUCTION_MODEL is None:
         try:
             print("Production Boot: Fetching model weights from ClearML...")
-            # Query the precise model configuration from your workspace
+            # Query the precise model configuration from the workspace
             clearml_model = Model.query_models(
                 project_name="MTN Nigeria Churn Prediction",
                 model_name="MTN_Nigeria_Best_Churn_Model",
