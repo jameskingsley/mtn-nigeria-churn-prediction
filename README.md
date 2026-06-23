@@ -1,4 +1,4 @@
-# 📱 MTN Nigeria Customer Churn Prediction Engine
+# MTN Nigeria Customer Churn Prediction Engine
 
 An enterprise-grade, end-to-end MLOps production pipeline that trains, registers, hosts, and serves an optimized machine learning model to predict subscriber churn for MTN Nigeria. 
 
