@@ -1,4 +1,5 @@
 import os
+import sys
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -20,10 +21,11 @@ from clearml import Task, OutputModel
 # Initialize ClearML Task for Experiment & Model Tracking
 task = Task.init(
     project_name="MTN Nigeria Churn Prediction", 
-    task_name="Model_Tournament_and_Registration"
+    task_name="Model_Tournament_and_Registration",
+    output_uri=True
 )
 
-# BULLETPROOF FIX: Get the script's exact directory to construct absolute tracking paths
+# Get the script's exact directory to construct absolute tracking paths
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 DB_PATH = os.path.abspath(os.path.join(SCRIPT_DIR, "..", "tracking", "mlflow.db"))
@@ -32,7 +34,7 @@ mlflow.set_tracking_uri(f"sqlite:///{DB_PATH}")
 mlflow.set_experiment("churn_tournament")
 
 def run_tournament():
-    # BULLETPROOF FIX: Use absolute path mapping to reliably pinpoint the cleaned dataset
+    # Use absolute path mapping to reliably pinpoint the cleaned dataset
     data_path = os.path.abspath(os.path.join(SCRIPT_DIR, "..", "..", "data", "processed", "mtn_customer_churn_cleaned.csv"))
     if not os.path.exists(data_path):
         raise FileNotFoundError(f"Cleaned dataset not found at {data_path}. Run the data cleaning steps first.")
@@ -118,6 +120,8 @@ def run_tournament():
         name="MTN_Nigeria_Best_Churn_Model", 
         framework="scikit-learn"
     )
+    
+    # ClearML will now push this file up to the cloud storage endpoint
     output_model.update_weights(weights_filename=local_model_path, auto_delete_file=False)
     
     print(f"Best Model [{best_model_name}] successfully locked down and registered in ClearML!")

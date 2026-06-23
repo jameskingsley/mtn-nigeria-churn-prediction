@@ -13,11 +13,11 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 app = FastAPI(
     title="MTN Nigeria Churn Production API",
-    description="Cloud-deployed inference engine backed by ClearML model artifacts.",
+    description="Cloud-deployed inference engine backed by cloud-hosted ClearML artifacts.",
     version="1.0.0"
 )
 
-# Enable CORS so Streamlit app can query the Render endpoint securely
+# Enable CORS so the Streamlit portal can query the Render endpoint securely
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  
@@ -26,38 +26,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global variable to cache the weights in memory on Render's container instance
+# Global variable to cache the weights in memory once downloaded
 _PRODUCTION_MODEL = None
 
 def download_and_cache_clearml_model():
     global _PRODUCTION_MODEL
     if _PRODUCTION_MODEL is None:
         try:
-            print(" Production Boot: Querying model configuration metadata from ClearML...")
-            # Query the precise model configuration from the workspace
+            print("Production Boot: Fetching latest model metadata from ClearML...")
+            # Query the precise published model from your workspace
             clearml_model = Model.query_models(
                 project_name="MTN Nigeria Churn Prediction",
                 model_name="MTN_Nigeria_Best_Churn_Model",
-                only_published=False
+                only_published=True  
             )[0]
             
-            # BYPASS: Extract the absolute cloud storage link directly from ClearML's backend registry
+            # Extract the raw cloud url (https://files.clear.ml/...)
             model_url = clearml_model.url
-            if not model_url:
-                raise ValueError("Could not extract a valid storage URL from the ClearML model object.")
+            if not model_url or not model_url.startswith("https"):
+                raise ValueError(f"Extracted an invalid cloud URL from registry: {model_url}")
                 
-            print(f"Direct artifact link discovered: {model_url}")
+            print(f"Direct cloud artifact link discovered: {model_url}")
             
-            # Explicitly force the target file storage path straight to Render's writable temp directory
+            # Force the file path straight to Render's container temporary storage
             local_path = "/tmp/best_churn_model.pkl"
             
-            # Download the file directly bypassing ClearML's internal caching client completely
-            print(f" Downloading weights directly into: {local_path} ...")
+            # Stream the binary weights directly down from the cloud storage bucket
+            print(f"Streaming weights directly into container filesystem: {local_path} ...")
             urllib.request.urlretrieve(model_url, local_path)
             
             print(f"Verified artifact weight target resolved to: {local_path}")
             
-            # Unpickle scikit-learn metrics pipeline into RAM memory
+            # Load the scikit-learn metrics pipeline into active system RAM
             _PRODUCTION_MODEL = joblib.load(local_path)
             print("Successfully anchored model into memory cache!")
         except Exception as e:
@@ -81,12 +81,12 @@ class CustomerFeatures(BaseModel):
 
 @app.get("/")
 def health_check():
-    return {"status": "healthy", "environment": "production_render", "registry": "clearml"}
+    return {"status": "healthy", "environment": "production_render", "registry": "clearml_cloud"}
 
 @app.post("/predict")
 def predict_churn(payload: CustomerFeatures):
     try:
-        # Pulls from ClearML URL on the 1st request, hits RAM cache on all following requests
+        # Lazy loads on the first request, hits RAM directly on all subsequent requests
         model = download_and_cache_clearml_model()
         input_df = pd.DataFrame([payload.model_dump()])
         
