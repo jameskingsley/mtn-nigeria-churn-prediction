@@ -1,6 +1,7 @@
 import os
 import sys
 import joblib
+import urllib.request
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,7 +33,7 @@ def download_and_cache_clearml_model():
     global _PRODUCTION_MODEL
     if _PRODUCTION_MODEL is None:
         try:
-            print("Production Boot: Fetching model weights from ClearML...")
+            print(" Production Boot: Querying model configuration metadata from ClearML...")
             # Query the precise model configuration from the workspace
             clearml_model = Model.query_models(
                 project_name="MTN Nigeria Churn Prediction",
@@ -40,20 +41,19 @@ def download_and_cache_clearml_model():
                 only_published=False
             )[0]
             
-            # Use native ClearML artifact caching layer safely
-            local_path = clearml_model.get_local_copy()
-            
-            if not local_path:
-                raise FileNotFoundError("ClearML registry returned an empty file path.")
+            # BYPASS: Extract the absolute cloud storage link directly from ClearML's backend registry
+            model_url = clearml_model.url
+            if not model_url:
+                raise ValueError("Could not extract a valid storage URL from the ClearML model object.")
                 
-            # If the downloaded artifact is a directory, look for the .pkl file inside it
-            if os.path.isdir(local_path):
-                print(f"Extracted folder found. Scanning directory contents: {local_path}")
-                files = [os.path.join(local_path, f) for f in os.listdir(local_path) if f.endswith('.pkl')]
-                if files:
-                    local_path = files[0]
-                else:
-                    raise FileNotFoundError(f"No .pkl files discovered inside directory: {local_path}")
+            print(f"Direct artifact link discovered: {model_url}")
+            
+            # Explicitly force the target file storage path straight to Render's writable temp directory
+            local_path = "/tmp/best_churn_model.pkl"
+            
+            # Download the file directly bypassing ClearML's internal caching client completely
+            print(f Downloading weights directly into: {local_path} ...")
+            urllib.request.urlretrieve(model_url, local_path)
             
             print(f"Verified artifact weight target resolved to: {local_path}")
             
@@ -86,7 +86,7 @@ def health_check():
 @app.post("/predict")
 def predict_churn(payload: CustomerFeatures):
     try:
-        # Pulls from ClearML on the 1st request, hits RAM cache on all following requests
+        # Pulls from ClearML URL on the 1st request, hits RAM cache on all following requests
         model = download_and_cache_clearml_model()
         input_df = pd.DataFrame([payload.model_dump()])
         
