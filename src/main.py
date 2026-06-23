@@ -52,7 +52,7 @@ def download_and_cache_clearml_model():
             local_path = "/tmp/best_churn_model.pkl"
             
             # Download the file directly bypassing ClearML's internal caching client completely
-            print(f Downloading weights directly into: {local_path} ...")
+            print(f" Downloading weights directly into: {local_path} ...")
             urllib.request.urlretrieve(model_url, local_path)
             
             print(f"Verified artifact weight target resolved to: {local_path}")
