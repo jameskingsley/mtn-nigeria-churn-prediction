@@ -1,13 +1,12 @@
 import os
 import sys
 import joblib
-import urllib.request
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from clearml import Model
-
+from clearml.storage import StorageManager  
 # Ensure smooth absolute package routing
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -38,7 +37,7 @@ def download_and_cache_clearml_model():
             clearml_model = Model.query_models(
                 project_name="MTN Nigeria Churn Prediction",
                 model_name="MTN_Nigeria_Best_Churn_Model",
-                only_published=True  
+                only_published=True
             )[0]
             
             # Extract the raw cloud url (https://files.clear.ml/...)
@@ -46,14 +45,11 @@ def download_and_cache_clearml_model():
             if not model_url or not model_url.startswith("https"):
                 raise ValueError(f"Extracted an invalid cloud URL from registry: {model_url}")
                 
-            print(f"Direct cloud artifact link discovered: {model_url}")
+            print(f"🔗 Authenticated cloud link discovered: {model_url}")
             
-            # Force the file path straight to Render's container temporary storage
-            local_path = "/tmp/best_churn_model.pkl"
-            
-            # Stream the binary weights directly down from the cloud storage bucket
-            print(f"Streaming weights directly into container filesystem: {local_path} ...")
-            urllib.request.urlretrieve(model_url, local_path)
+            # Use ClearML's StorageManager to download the secure link.
+            print("Downloading weights securely via ClearML Storage Manager...")
+            local_path = StorageManager.get_local_copy(remote_url=model_url)
             
             print(f"Verified artifact weight target resolved to: {local_path}")
             
@@ -86,7 +82,6 @@ def health_check():
 @app.post("/predict")
 def predict_churn(payload: CustomerFeatures):
     try:
-        # Lazy loads on the first request, hits RAM directly on all subsequent requests
         model = download_and_cache_clearml_model()
         input_df = pd.DataFrame([payload.model_dump()])
         
