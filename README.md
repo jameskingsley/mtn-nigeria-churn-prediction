@@ -93,7 +93,7 @@ CLEARML_API_SECRET_KEY=your_clearml_secret_key_here
 Clone the Repository:
 
 Bash
-git clone [https://github.com/your-username/mtn-nigeria-churn-prediction.git](https://github.com/your-username/mtn-nigeria-churn-prediction.git)
+git clone [https://github.com/jameskingsley/mtn-nigeria-churn-prediction.git](https://github.com/your-username/mtn-nigeria-churn-prediction.git)
 cd mtn-nigeria-churn-prediction
 Initialize and Activate Virtual Environment:
 
