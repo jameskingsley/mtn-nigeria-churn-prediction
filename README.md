@@ -9,6 +9,7 @@ This system completely decouples code from heavy binary artifacts, utilizing a c
 ## Live Infrastructure Links
 * **Production API Gateway (FastAPI):** [https://mtn-nigeria-churn-prediction.onrender.com]
 * **Interactive Scoring Portal (Streamlit):** [https://mtn-nigeria-churn-prediction-ez8fhrnajyyye9g46hmtct.streamlit.appR]
+* **Dashboard Link:** [https://datastudio.google.com/s/kze41HOwtFc]
 
 ---
 
